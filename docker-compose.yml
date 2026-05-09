@@ -6,7 +6,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "9038:8000"
     volumes:
       - ./data:/app/data
     environment:
@@ -18,7 +18,7 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_API_URL=http://43.156.73.7:9038/api
+    env_file:
+      - .env
     depends_on:
       - backend
