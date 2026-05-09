@@ -6,7 +6,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "9038:8000"
+      - "9040:8000"
     volumes:
       - ./data:/app/data
     environment:
@@ -17,7 +17,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "3001:3000"
+      - "9039:3000"
     env_file:
       - .env
     depends_on:
