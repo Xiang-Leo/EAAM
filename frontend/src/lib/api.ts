@@ -21,8 +21,8 @@ import type {
 // 基础配置
 // ---------------------------------------------------------------------------
 
-const BASE_URL =
-  (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000').replace(/\/$/, '');
+const _rawEnv = process.env.NEXT_PUBLIC_API_BASE_URL;
+const BASE_URL = (_rawEnv && _rawEnv.trim() !== '' ? _rawEnv : 'http://localhost:8000').replace(/\/$/, '');
 
 // ---------------------------------------------------------------------------
 // 内部工具函数
