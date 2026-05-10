@@ -1,0 +1,33 @@
+======================================================================
+EAAM 数据验证报告
+生成时间：2026-05-10 08:52:10
+======================================================================
+
+[SUMMARY]  ERROR: 0  |  WARNING: 1
+
+── 信息 (INFO) ──────────────────────────────────────────────────────
+  ✓  samples 文件：data/raw/samples.csv
+  ✓  abundance 文件：data/processed/taxonomy_abundance_long.csv
+  ✓  报告输出：data/processed/validation_report.txt
+  ✓  ── 开始检查 samples.csv ──────────────────────────
+  ✓  samples.csv 字段完整（包含全部 6 个必要字段）。
+  ✓  samples.csv 无空 sample_id。
+  ✓  samples.csv 无重复 sample_id。
+  ✓  samples.csv 共 50 个有效样品。
+  ✓  ── 开始检查 abundance 表 ─────────────────────────
+  ✓  abundance 表字段完整（包含全部 9 个必要字段）。
+  ✓  abundance 表共 2485 行，50 个唯一样品，100 个唯一 taxid。
+  ✓  reads_all 全部为非负数。
+  ✓  reads_lvl 全部为非负数。
+  ✓  relative_abundance_all 全部在 [0, 1] 范围内。
+  ✓  relative_abundance_lvl 全部在 [0, 1] 范围内。
+  ✓  ── 开始交叉一致性检查 ────────────────────────────
+  ✓  abundance 表中的所有 sample_id 均存在于 samples.csv。
+  ✓  samples.csv 中的所有 sample_id 均在 abundance 表中有数据。
+  ✓  ── 开始顶层 abundance 合理性检查 ─────────────────
+
+── 警告 (WARNING) ───────────────────────────────────────────────────
+  ⚠  abundance 表中没有 root / domain / unclassified 级别的行，跳过合理性检查。
+
+【结论】数据存在轻微问题，建议核查后导入。
+======================================================================

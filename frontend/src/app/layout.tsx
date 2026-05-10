@@ -1,51 +1,51 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import "./globals.css";
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: "EAAM | Ancient Chinese Dental Calculus Microbiome",
-  description: "A database for querying, filtering, and visualizing the microbial composition of ancient Chinese dental calculus samples.",
+  title: 'EAAM | Ancient Calculus Microbiome Database',
+  description: 'Query, filter, and visualize the microbial composition of ancient Chinese dental calculus samples.',
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+const NAV = [
+  { href: '/',                label: 'Dashboard' },
+  { href: '/samples',        label: 'Samples' },
+  { href: '/taxa',           label: 'Taxa' },
+  { href: '/taxa/distribution', label: 'Distribution' },
+  { href: '/ai-query',       label: 'AI Query' },
+];
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="font-sans bg-slate-50 min-h-screen flex flex-col text-slate-900">
-        <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16">
-              <div className="flex items-center">
-                <Link href="/" className="flex-shrink-0 flex items-center font-bold text-2xl text-blue-700 tracking-tight">
-                  EAAM
+      <body className="min-h-screen bg-gray-50 text-gray-900">
+        {/* Top navigation */}
+        <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center h-14 gap-6">
+            <Link href="/" className="font-bold text-lg text-indigo-700 tracking-tight shrink-0">
+              EAAM
+            </Link>
+            <div className="flex gap-1 overflow-x-auto">
+              {NAV.map(({ href, label }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="px-3 py-1.5 rounded-md text-sm text-gray-600 hover:text-indigo-700 hover:bg-indigo-50 transition-colors whitespace-nowrap"
+                >
+                  {label}
                 </Link>
-                <nav className="ml-10 flex space-x-8">
-                  <Link href="/samples" className="text-slate-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                    Samples
-                  </Link>
-                  <Link href="/taxa/distribution" className="text-slate-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                    Taxon Distribution
-                  </Link>
-                  <Link href="/taxa/top" className="text-slate-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                    Top Taxa Discovery
-                  </Link>
-                </nav>
-              </div>
+              ))}
             </div>
           </div>
-        </header>
+        </nav>
 
-        <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        {/* Page content */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {children}
         </main>
 
-        <footer className="bg-white border-t border-slate-200 py-8">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-slate-500 text-sm">
-            &copy; {new Date().getFullYear()} EAAM Project. All rights reserved.
-          </div>
+        <footer className="border-t border-gray-200 mt-16 py-6 text-center text-xs text-gray-400">
+          © {new Date().getFullYear()} EAAM Project
         </footer>
       </body>
     </html>
