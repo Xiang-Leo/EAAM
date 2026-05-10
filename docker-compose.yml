@@ -17,7 +17,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+        # ⚠️ 请把这里的 http://localhost:9040 替换为您的云主机公网IP，例如 http://1.2.3.4:9040
+        - NEXT_PUBLIC_API_BASE_URL=http://localhost:9040
     ports:
       - "9039:3000"
     env_file:
