@@ -98,12 +98,12 @@ npm run dev
 ## 9. Docker 启动方式
 为方便服务器部署，本仓库提供了一键容器化配置方案：
 ```bash
-# 根目录下执行
+# 根目录下执行（请确保已基于 .env.example 建立 .env 文件，并配置正确）
 docker compose up --build
 ```
 执行完毕后：
-- 前端页面: `http://localhost:3000`
-- 后端 API: `http://localhost:8000`
+- 前端页面: `http://localhost:9039`
+- 后端 API: `http://localhost:9040`
 
 ---
 

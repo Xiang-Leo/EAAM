@@ -71,9 +71,12 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:9039",   # 本地开发前端
-        "http://localhost:3000",   # 前端 Docker 内部端口
-        *settings.CORS_ORIGINS,   # 通过环境变量追加（如生产域名）
+        "http://localhost:3000",   # 本地开发前端默认端口
+        "http://localhost:9039",   # Docker Compose 映射的前端端口
+        # 在真实部署中，应当把云服务器的公网 IP 放进环境变量 CORS_ORIGINS 中，或者直接在这里放行。
+        # 这里设置为允许所有以避免初学者配置麻烦，生产环境建议缩小范围
+        "*", 
+        *settings.CORS_ORIGINS,
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],

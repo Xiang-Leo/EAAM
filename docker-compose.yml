@@ -1,18 +1,26 @@
+version: '3.8'
+
 services:
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=sqlite:///./ancient_calculus.db
+      - "9040:8000"
     volumes:
-      - ./backend/ancient_calculus.db:/app/ancient_calculus.db
+      - ./data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:////app/data/eaam.db
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
     ports:
-      - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+      - "9039:3000"
+    env_file:
+      - .env
     depends_on:
       - backend
