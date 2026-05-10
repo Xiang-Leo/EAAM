@@ -51,10 +51,15 @@ function toQueryString(
  * - 非 2xx 响应抛出带 status + message 的 Error
  */
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...init,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      headers: { 'Content-Type': 'application/json' },
+      ...init,
+    });
+  } catch (error: any) {
+    throw new Error(`${error.message} [Target: ${BASE_URL}${path}]`);
+  }
 
   if (!res.ok) {
     let message = `HTTP ${res.status}: ${res.statusText} [Target: ${BASE_URL}${path}]`;
