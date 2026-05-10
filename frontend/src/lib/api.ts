@@ -57,7 +57,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!res.ok) {
-    let message = `HTTP ${res.status}: ${res.statusText}`;
+    let message = `HTTP ${res.status}: ${res.statusText} [Target: ${BASE_URL}${path}]`;
     try {
       const body = await res.json();
       if (typeof body.detail === 'string') {
