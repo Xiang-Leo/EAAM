@@ -5,8 +5,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    ports:
-      - "9040:8000"
     volumes:
       - ./data:/app/data
     environment:
@@ -22,6 +20,6 @@ services:
         - NEXT_PUBLIC_API_BASE_URL=
         - API_PROXY_TARGET=http://backend:8000
     ports:
-      - "9039:3000"
+      - "127.0.0.1:9039:3000"
     depends_on:
       - backend
