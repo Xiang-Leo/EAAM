@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { askAI } from '@/lib/api';
+import { API_BASE_URL, askAI } from '@/lib/api';
 import type { AIQueryResponse } from '@/types/api';
 
 const EXAMPLES = [
@@ -202,7 +202,7 @@ export default function AIQueryPage() {
                 <div className="pt-4 border-t border-gray-100">
                    <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2">Recommended API Route</h3>
                    <a
-                    href={`${process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000'}${plan.recommended_endpoint}`}
+                    href={`${API_BASE_URL}${plan.recommended_endpoint}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block w-full p-3 bg-gray-900 text-green-400 font-mono text-xs rounded-lg hover:bg-gray-800 transition-colors break-all border border-gray-700"

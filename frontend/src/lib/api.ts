@@ -1,6 +1,7 @@
 // frontend/src/lib/api.ts
 // 统一封装所有后端 API 调用。
-// 后端 base URL 通过环境变量 NEXT_PUBLIC_API_BASE_URL 注入，默认 http://localhost:8000。
+// 默认使用同源 /api，由 Next.js rewrites 代理到后端；如需直连后端，可设置
+// NEXT_PUBLIC_API_BASE_URL，例如 http://localhost:8000。
 
 import type {
   SampleListResponse,
@@ -22,7 +23,7 @@ import type {
 // ---------------------------------------------------------------------------
 
 const _rawEnv = process.env.NEXT_PUBLIC_API_BASE_URL;
-const BASE_URL = (_rawEnv && _rawEnv.trim() !== '' ? _rawEnv : 'http://localhost:8000').replace(/\/$/, '');
+export const API_BASE_URL = (_rawEnv && _rawEnv.trim() !== '' ? _rawEnv : '').replace(/\/$/, '');
 
 // ---------------------------------------------------------------------------
 // 内部工具函数
@@ -53,16 +54,16 @@ function toQueryString(
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(`${BASE_URL}${path}`, {
+    res = await fetch(`${API_BASE_URL}${path}`, {
       headers: { 'Content-Type': 'application/json' },
       ...init,
     });
   } catch (error: any) {
-    throw new Error(`${error.message} [Target: ${BASE_URL}${path}]`);
+    throw new Error(`${error.message} [Target: ${API_BASE_URL || 'same-origin'}${path}]`);
   }
 
   if (!res.ok) {
-    let message = `HTTP ${res.status}: ${res.statusText} [Target: ${BASE_URL}${path}]`;
+    let message = `HTTP ${res.status}: ${res.statusText} [Target: ${API_BASE_URL || 'same-origin'}${path}]`;
     try {
       const body = await res.json();
       if (typeof body.detail === 'string') {

@@ -11,7 +11,9 @@ COPY . .
 
 # Build Next.js
 ARG NEXT_PUBLIC_API_BASE_URL
+ARG API_PROXY_TARGET=http://backend:8000
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+ENV API_PROXY_TARGET=${API_PROXY_TARGET}
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
@@ -21,6 +23,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV API_PROXY_TARGET=http://backend:8000
 
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./

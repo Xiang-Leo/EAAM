@@ -105,6 +105,15 @@ docker compose up --build
 - 前端页面: `http://localhost:9039`
 - 后端 API: `http://localhost:9040`
 
+前端默认通过同源 `/api/*` 访问接口，并由 Next.js 容器代理到后端容器
+`http://backend:8000`。部署到 ECS 时，浏览器只需要能访问前端地址
+`http://<服务器公网 IP>:9039`；后端 `9040` 端口可用于调试，不再要求前端页面直连。
+如果确实希望浏览器直连后端，请在构建前端镜像时设置
+`NEXT_PUBLIC_API_BASE_URL=http://<服务器公网 IP>:9040`，并确保安全组/防火墙/CORS 已允许该访问。
+
+Docker 后端默认读取镜像内的 `backend/ancient_calculus.db`。如需重新导入数据，请先运行
+`python scripts/import_to_db.py --reset` 生成该数据库，再重新构建后端镜像。
+
 ---
 
 ## 10. API 列表
