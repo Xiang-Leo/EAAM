@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     # ---- CORS ---------------------------------------------------------
     CORS_ORIGINS: list[str] = ["*"]
 
+    # ---- Admin --------------------------------------------------------
+    ADMIN_USERNAME: str = "admin"
+    ADMIN_PASSWORD: str = "change-me"
+    ADMIN_TOKEN_TTL_HOURS: int = 12
+    ADMIN_UPLOAD_DIR: str = "./uploads"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

@@ -113,6 +113,47 @@ docker compose up --build
 Docker 后端默认读取镜像内的 `backend/ancient_calculus.db`。如需重新导入数据，请先运行
 `python scripts/import_to_db.py --reset` 生成该数据库，再重新构建后端镜像。
 
+### 管理员后台（第一期）
+
+后台入口：
+
+- 页面：`/admin`
+- API：`/api/admin/*`
+
+部署前请在 `.env` 中设置管理员账号密码：
+
+```bash
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=请替换为强密码
+```
+
+后台第一期支持：
+
+- 管理员登录
+- 上传 CSV / TSV
+- 触发样品 metadata、KO gene family、pathway 文件导入
+- 查看导入任务状态
+- 下载导入日志和错误报告
+
+后台第二期支持：
+
+- 查看当前数据库统计
+- 创建 SQLite 数据库备份
+- 下载数据库备份
+- 从备份恢复数据库
+- 删除某次 KO / pathway 功能丰度导入的数据
+
+上传文件和导入报告会保存到宿主机 `./uploads`，并通过 Docker 挂载到后端容器 `/app/uploads`。
+数据库备份会保存到 `./uploads/backups`。当前备份 / 恢复功能面向 SQLite 部署；若切换到 PostgreSQL，应改用 `pg_dump` / `pg_restore` 工作流。
+
+后台第三期支持：
+
+- 在网页中编辑样品 metadata
+- 上传文件导入前预览表头、样例行和基础校验结果
+- 为导入配置关键字段映射，例如把原始 `Gene` 列映射为 `feature_id`
+- 创建多个管理员账号
+- 查看管理员审计日志
+
 ---
 
 ## 10. API 列表

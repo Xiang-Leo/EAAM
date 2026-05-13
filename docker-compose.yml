@@ -7,8 +7,12 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ./data:/app/data
+      - ./uploads:/app/uploads
     environment:
       - DATABASE_URL=sqlite:////app/ancient_calculus.db
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-change-me}
+      - ADMIN_UPLOAD_DIR=/app/uploads
 
   frontend:
     build:

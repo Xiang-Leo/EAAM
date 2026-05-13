@@ -1,0 +1,4 @@
+sample_id,display_name,province,region,dynasty,period,estimated_year,sex,subsistence_pattern,site_name,latitude,longitude,source,source_url,publication_title,doi,notes
+JS_Ming_3,JS Ming 3,Jiangsu,East China,Ming,Late Ming,1500,F,Agriculture,Example Site A,32.0603,118.7969,Example Study,https://example.com/dataset,Ancient dental calculus microbiome dataset,10.0000/example.1,
+HN_WestZhou_2,HN West Zhou 2,Henan,Central China,West Zhou,Western Zhou,-900,Unknown,Mixed,Example Site B,34.7657,113.7536,Example Study,https://example.com/dataset,Ancient dental calculus microbiome dataset,10.0000/example.1,
+GS_WestZhou_4,GS West Zhou 4,Gansu,Northwest China,West Zhou,Western Zhou,-850,M,Pastoralism,Example Site C,36.0611,103.8343,Example Study,https://example.com/dataset,Ancient dental calculus microbiome dataset,10.0000/example.1,

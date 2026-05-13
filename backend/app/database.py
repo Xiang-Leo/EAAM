@@ -92,3 +92,25 @@ def get_db() -> Generator[Session, None, None]:
 def create_all_tables() -> None:
     """根据 ORM 模型定义在数据库中创建所有表（若不存在）。"""
     Base.metadata.create_all(bind=engine)
+    _apply_lightweight_sqlite_migrations()
+
+
+def _apply_lightweight_sqlite_migrations() -> None:
+    """Small compatibility migrations for deployments without Alembic."""
+    settings = get_settings()
+    if not settings.DATABASE_URL.startswith("sqlite"):
+        return
+    with engine.begin() as conn:
+        table_names = {
+            row[0]
+            for row in conn.exec_driver_sql(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+        }
+        if "data_import_jobs" in table_names:
+            columns = {
+                row[1]
+                for row in conn.exec_driver_sql("PRAGMA table_info(data_import_jobs)").fetchall()
+            }
+            if "field_mapping" not in columns:
+                conn.exec_driver_sql("ALTER TABLE data_import_jobs ADD COLUMN field_mapping TEXT")

@@ -1,0 +1,6 @@
+feature_type,feature_id,label,url,notes
+gene_family,K00003,KEGG KO,https://www.kegg.jp/entry/K00003,
+gene_family,K00004,KEGG KO,https://www.kegg.jp/entry/K00004,
+pathway,ARG+POLYAMINE-SYN,MetaCyc,https://metacyc.org/META/NEW-IMAGE?type=PATHWAY&object=ARG+POLYAMINE-SYN,
+sample,JS_Ming_3,Sample source,https://example.com/samples/JS_Ming_3,
+publication,10.0000/example.1,DOI,https://doi.org/10.0000/example.1,

@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import create_all_tables
-from app.api.routers import samples, taxa, summary, ai
+from app.api.routers import samples, taxa, summary, ai, admin
 
 # ---------------------------------------------------------------------------
 # 日志
@@ -90,6 +90,7 @@ app.include_router(samples.router, prefix="/api/samples", tags=["Samples"])
 app.include_router(taxa.router,    prefix="/api/taxa",    tags=["Taxa"])
 app.include_router(summary.router, prefix="/api/summary", tags=["Summary"])
 app.include_router(ai.router,      prefix="/api/ai",      tags=["AI"])
+app.include_router(admin.router,   prefix="/api/admin",   tags=["Admin"])
 
 # ---------------------------------------------------------------------------
 # 基础路由

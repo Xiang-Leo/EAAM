@@ -8,9 +8,27 @@ backend/app/models/__init__.py
 from .sample import Sample
 from .taxon import Taxon
 from .taxonomy_abundance import TaxonomyAbundance
+from .admin import (
+    AdminSession,
+    AdminUpload,
+    AdminUser,
+    AuditLog,
+    BackupJob,
+    DataImportJob,
+    FunctionalAbundance,
+    FunctionalFeature,
+)
 
 __all__ = [
     "Sample",
     "Taxon",
     "TaxonomyAbundance",
+    "AdminSession",
+    "AdminUpload",
+    "AdminUser",
+    "AuditLog",
+    "BackupJob",
+    "DataImportJob",
+    "FunctionalAbundance",
+    "FunctionalFeature",
 ]

@@ -1,0 +1,4 @@
+dataset_id,data_type,file_name,description,version,source,source_url,contact,notes
+eaam_2026_samples,samples,samples_metadata.csv,Sample metadata for EAAM functional abundance tables,v1,Example Study,https://example.com/dataset,maintainer@example.com,
+eaam_2026_ko,gene_family,functional_genefamilies_ko_relab_unstratified.tsv,KO relative abundance table,v1,Example Study,https://example.com/dataset,maintainer@example.com,
+eaam_2026_pathway,pathway,functional_pathabundance_relab_stratified.tsv,Pathway relative abundance table,v1,Example Study,https://example.com/dataset,maintainer@example.com,
