@@ -69,8 +69,8 @@ export default function DashboardPage() {
       <div>
         <h1 className="text-3xl font-bold text-gray-900">EAAM Database</h1>
         <p className="mt-2 text-gray-500 max-w-2xl">
-          Ancient Chinese Dental Calculus Microbiome — explore microbial composition
-          across dynasties, regions, and subsistence patterns.
+          East Asian Ancient Microbiome — explore microbial composition across
+          periods, regions, archaeological contexts, and subsistence patterns.
         </p>
       </div>
 
@@ -120,6 +120,63 @@ export default function DashboardPage() {
                 style={{ height: 320 }} 
               />
             </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+            <ReactECharts
+              option={{
+                title: { text: 'Sampling Map', textStyle: { fontSize: 14, color: '#374151' } },
+                tooltip: {
+                  trigger: 'item',
+                  formatter: (params: { data: any[] }) => {
+                    const [lon, lat, count, province, dynasty, region] = params.data;
+                    return [
+                      `${province || 'Unknown'} · ${dynasty || 'Unknown'}`,
+                      `Region: ${region || 'Unknown'}`,
+                      `Samples: ${count}`,
+                      `Lon/Lat: ${Number(lon).toFixed(2)}, ${Number(lat).toFixed(2)}`,
+                    ].join('<br/>');
+                  },
+                },
+                grid: { left: 54, right: 22, top: 52, bottom: 46 },
+                xAxis: {
+                  type: 'value',
+                  name: 'Longitude',
+                  min: 70,
+                  max: 145,
+                  splitLine: { lineStyle: { color: '#e5e7eb' } },
+                },
+                yAxis: {
+                  type: 'value',
+                  name: 'Latitude',
+                  min: 15,
+                  max: 55,
+                  splitLine: { lineStyle: { color: '#e5e7eb' } },
+                },
+                series: [
+                  {
+                    name: 'Sampling sites',
+                    type: 'scatter',
+                    data: data.sample_locations.map((site) => [
+                      site.longitude,
+                      site.latitude,
+                      site.count,
+                      site.province,
+                      site.dynasty,
+                      site.region,
+                    ]),
+                    symbolSize: (value: any[]) => Math.max(8, Math.min(34, 8 + Number(value[2]) * 3)),
+                    itemStyle: {
+                      color: '#0f766e',
+                      opacity: 0.78,
+                      borderColor: '#ffffff',
+                      borderWidth: 1,
+                    },
+                  },
+                ],
+              }}
+              style={{ height: 420 }}
+            />
           </div>
 
           {/* Rank Distribution & Quick Links */}

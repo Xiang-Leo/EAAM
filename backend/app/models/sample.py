@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 class Sample(Base):
     """
     对应数据表 `samples`。
-    存储古代牙结石样品的元数据信息。
+    存储东亚古微生物样品的元数据信息。
     """
 
     __tablename__ = "samples"

@@ -400,6 +400,17 @@ def _upsert_samples(db: Session, path: Path, mapping: dict | None = None) -> tup
             try:
                 return int(float(value))
             except ValueError:
+                # Support archaeological ranges such as "582-306BP".
+                # BP is conventionally years before 1950; store the midpoint as CE/BCE year.
+                bp_range = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s*BP\s*", value, flags=re.IGNORECASE)
+                if bp_range:
+                    older_bp = float(bp_range.group(1))
+                    younger_bp = float(bp_range.group(2))
+                    midpoint_bp = (older_bp + younger_bp) / 2
+                    return int(round(1950 - midpoint_bp))
+                bp_single = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*BP\s*", value, flags=re.IGNORECASE)
+                if bp_single:
+                    return int(round(1950 - float(bp_single.group(1))))
                 errors.append(f"Invalid integer for sample {sid}, column {col}: {value!r}")
                 return None
 
@@ -468,7 +479,8 @@ def _get_or_create_feature(
 def _import_gene_family(db: Session, upload: AdminUpload, mapping: dict | None = None) -> tuple[int, list[str]]:
     path = Path(upload.path)
     raw_header = _read_header(path, "\t")
-    feature_col = _mapping_value(mapping, "feature_id", "feature_id")
+    default_feature_col = "feature_id" if "feature_id" in raw_header else ("Gene" if "Gene" in raw_header else "feature_id")
+    feature_col = _mapping_value(mapping, "feature_id", default_feature_col)
     raw_errors = _validate_sample_columns([col for col in raw_header if col != feature_col], set(_sample_map(db)))
     if raw_errors:
         return 0, raw_errors
@@ -531,10 +543,13 @@ def _import_gene_family(db: Session, upload: AdminUpload, mapping: dict | None =
 def _import_pathway(db: Session, upload: AdminUpload, mapping: dict | None = None) -> tuple[int, list[str]]:
     path = Path(upload.path)
     raw_header = _read_header(path, "\t")
+    raw_name_col = "NAME" if "NAME" in raw_header else None
     feature_id_col = _mapping_value(mapping, "feature_id", "feature_id")
     feature_name_col = _mapping_value(mapping, "feature_name", "feature_name")
     stratification_col = _mapping_value(mapping, "stratification", "stratification")
     metadata_cols = {feature_id_col, feature_name_col, stratification_col}
+    if raw_name_col and not {"feature_id", "feature_name", "stratification"}.issubset(set(raw_header)):
+        metadata_cols = {raw_name_col}
     raw_errors = _validate_sample_columns([col for col in raw_header if col not in metadata_cols], set(_sample_map(db)))
     if raw_errors:
         return 0, raw_errors
@@ -548,6 +563,24 @@ def _import_pathway(db: Session, upload: AdminUpload, mapping: dict | None = Non
         stratification_col: "stratification",
     }
     df = df.rename(columns={src: dst for src, dst in rename.items() if src in df.columns})
+    if raw_name_col and raw_name_col in df.columns and not {"feature_id", "feature_name", "stratification"}.issubset(set(df.columns)):
+        df = df[df[raw_name_col].str.lower() != "label"]
+        df = df[df[raw_name_col].str.lower() != "lable"]
+
+        def parse_raw_name(value: str) -> pd.Series:
+            raw = str(value).strip()
+            pathway_part, _, stratification = raw.partition("|")
+            feature_id, sep, feature_name = pathway_part.partition(":")
+            return pd.Series(
+                {
+                    "feature_id": feature_id.strip(),
+                    "feature_name": feature_name.strip() if sep else feature_id.strip(),
+                    "stratification": stratification.strip() or "unstratified",
+                }
+            )
+
+        parsed = df[raw_name_col].apply(parse_raw_name)
+        df = pd.concat([parsed, df.drop(columns=[raw_name_col])], axis=1)
     missing = required - set(df.columns)
     if missing:
         return 0, [f"Pathway table is missing required columns: {', '.join(sorted(missing))}"]

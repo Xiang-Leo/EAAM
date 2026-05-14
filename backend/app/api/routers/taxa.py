@@ -14,6 +14,7 @@ from __future__ import annotations
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -125,7 +126,55 @@ def get_top_taxa(
 
 
 # ---------------------------------------------------------------------------
-# 3. GET /api/taxa/{taxid}/distribution
+# 3. GET /api/taxa/export
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/export",
+    summary="Download filtered taxonomic abundance table",
+    description="按地区、朝代等筛选下载物种/分类层级丰度表。默认导出 species 的样品 × 物种矩阵。",
+)
+def export_taxa_abundance(
+    rank:                str           = Query("species", description=f"层级，默认 species。合法值：{sorted(VALID_RANKS)}"),
+    dynasty:             Optional[str] = Query(None, description="按朝代筛选样品"),
+    province:            Optional[str] = Query(None, description="按省份筛选样品"),
+    region:              Optional[str] = Query(None, description="按大区筛选样品"),
+    sex:                 Optional[str] = Query(None, description="按性别筛选样品"),
+    subsistence_pattern: Optional[str] = Query(None, description="按生业模式筛选样品"),
+    abundance_type:      str           = Query("relative_abundance_all", description="丰度字段"),
+    format:              str           = Query("matrix", pattern="^(matrix|long)$", description="matrix 或 long"),
+    db: Session = Depends(get_db),
+) -> Response:
+    _require_valid_rank(rank, required=True)
+    _require_valid_abundance_type(abundance_type)
+    csv_text = taxa_service.export_abundance_table(
+        db=db,
+        rank=rank,
+        dynasty=dynasty,
+        province=province,
+        region=region,
+        sex=sex,
+        subsistence_pattern=subsistence_pattern,
+        abundance_type=abundance_type,
+        table_format=format,
+    )
+    parts = ["eaam", rank, "abundance"]
+    if dynasty:
+        parts.append(dynasty)
+    if province:
+        parts.append(province)
+    if region:
+        parts.append(region)
+    filename = "_".join(part.replace(" ", "-") for part in parts) + ".csv"
+    return Response(
+        content=csv_text.encode("utf-8-sig"),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# ---------------------------------------------------------------------------
+# 4. GET /api/taxa/{taxid}/distribution
 # ---------------------------------------------------------------------------
 
 @router.get(

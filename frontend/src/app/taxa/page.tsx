@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, FormEvent } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { getTopTaxa } from '@/lib/api';
+import { getTaxaExportUrl, getTopTaxa } from '@/lib/api';
 import type { TopTaxonResult, GetTopTaxaParams } from '@/types/api';
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
@@ -95,6 +95,16 @@ export default function TaxaPage() {
     setFilters({ rank: 'genus', top_n: 20 });
   };
 
+  const exportParams = {
+    rank: 'species',
+    dynasty: dynasty || undefined,
+    province: province || undefined,
+    region: region || undefined,
+    sex: sex || undefined,
+    subsistence_pattern: subsistence || undefined,
+    format: 'matrix' as const,
+  };
+
   const chartOption = {
     tooltip: {
       trigger: 'axis',
@@ -154,6 +164,12 @@ export default function TaxaPage() {
             >
               Reset
             </button>
+            <a
+              href={getTaxaExportUrl(exportParams)}
+              className="px-4 py-1.5 text-sm border border-teal-200 text-teal-700 rounded-lg hover:bg-teal-50 transition-colors"
+            >
+              Download species table
+            </a>
           </div>
         </div>
       </form>

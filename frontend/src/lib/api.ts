@@ -152,6 +152,13 @@ export function getTopTaxa(params: GetTopTaxaParams): Promise<TopTaxonResult[]> 
   return apiFetch(`/api/taxa/top${qs}`);
 }
 
+export function getTaxaExportUrl(params: GetTopTaxaParams & { format?: 'matrix' | 'long' }): string {
+  const qs = toQueryString(
+    params as unknown as Record<string, string | number | boolean | undefined>
+  );
+  return `${API_BASE_URL}/api/taxa/export${qs}`;
+}
+
 /**
  * 获取某 taxon 在指定分组维度下的丰度分布。
  * @param taxid  - NCBI Taxonomy ID（字符串）

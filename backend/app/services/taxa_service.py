@@ -300,3 +300,68 @@ def get_taxon_distribution(
         group_by=group_by,
         data=data,
     )
+
+
+def export_abundance_table(
+    db: Session,
+    rank: str = "species",
+    dynasty: str | None = None,
+    province: str | None = None,
+    region: str | None = None,
+    sex: str | None = None,
+    subsistence_pattern: str | None = None,
+    abundance_type: str = "relative_abundance_all",
+    table_format: str = "matrix",
+) -> str:
+    """Export filtered taxonomic abundance as CSV text."""
+    abund_col = (
+        TaxonomyAbundance.relative_abundance_all
+        if abundance_type == "relative_abundance_all"
+        else TaxonomyAbundance.relative_abundance_lvl
+    )
+    filters = _sample_filters(dynasty, province, region, sex, subsistence_pattern)
+
+    query = (
+        db.query(
+            Sample.sample_id,
+            Sample.dynasty,
+            Sample.province,
+            Sample.region,
+            Taxon.taxid,
+            Taxon.name,
+            Taxon.rank,
+            abund_col.label("abundance"),
+        )
+        .join(TaxonomyAbundance, TaxonomyAbundance.sample_id == Sample.id)
+        .join(Taxon, Taxon.id == TaxonomyAbundance.taxon_id)
+        .filter(Taxon.rank == rank)
+    )
+    if filters:
+        query = query.filter(*filters)
+
+    rows = query.order_by(Sample.sample_id, Taxon.name).all()
+    if not rows:
+        if table_format == "long":
+            return "sample_id,dynasty,province,region,taxid,name,rank,abundance\n"
+        return "sample_id,dynasty,province,region\n"
+
+    df = pd.DataFrame(
+        rows,
+        columns=["sample_id", "dynasty", "province", "region", "taxid", "name", "rank", "abundance"],
+    )
+    if table_format == "long":
+        return df.to_csv(index=False)
+
+    df["feature"] = df["name"].astype(str) + "|" + df["taxid"].astype(str)
+    matrix = (
+        df.pivot_table(
+            index=["sample_id", "dynasty", "province", "region"],
+            columns="feature",
+            values="abundance",
+            aggfunc="sum",
+            fill_value=0,
+        )
+        .reset_index()
+    )
+    matrix.columns.name = None
+    return matrix.to_csv(index=False)

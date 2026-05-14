@@ -3,8 +3,8 @@ import Link from 'next/link';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'EAAM | Ancient Calculus Microbiome Database',
-  description: 'Query, filter, and visualize the microbial composition of ancient Chinese dental calculus samples.',
+  title: 'EAAM | East Asian Ancient Microbiome Database',
+  description: 'Query, filter, and visualize ancient microbiome data from East Asian archaeological contexts.',
 };
 
 const NAV = [

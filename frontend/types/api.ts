@@ -104,6 +104,14 @@ export interface SummaryResponse {
   taxon_count: number;
   abundance_count: number;
   dynasty_distribution: DynastyCount[];
+  sample_locations?: Array<{
+    latitude: number;
+    longitude: number;
+    province: string | null;
+    region: string | null;
+    dynasty: string | null;
+    count: number;
+  }>;
 }
 
 // ---------------------------------------------------------------------------

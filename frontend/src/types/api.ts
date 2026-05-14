@@ -134,6 +134,15 @@ export interface RankCount {
   count: number;
 }
 
+export interface SampleLocation {
+  latitude: number;
+  longitude: number;
+  province: string | null;
+  region: string | null;
+  dynasty: string | null;
+  count: number;
+}
+
 export interface SummaryResponse {
   sample_count: number;
   taxon_count: number;
@@ -143,6 +152,7 @@ export interface SummaryResponse {
   dynasty_distribution: GroupCount[];
   province_distribution: GroupCount[];
   rank_distribution: RankCount[];
+  sample_locations: SampleLocation[];
 }
 
 // ---------------------------------------------------------------------------

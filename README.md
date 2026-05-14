@@ -1,7 +1,7 @@
-# EAAM Database (Ancient Calculus Microbiome)
+# EAAM Database (East Asian Ancient Microbiome)
 
 ## 1. 项目简介
-EAAM (East Asian Ancient Microbiome) 研究数据库是一个专为展示和分析**中国古代牙结石微生物组（Ancient Chinese Dental Calculus Microbiome）**数据而设计的综合性分析平台。项目结合了现代前后端技术与数据处理流水线，旨在让科研人员和考古学家能够直观地在宏观时间尺度（朝代）、地理空间尺度（省份/大区）以及人类行为尺度（生业模式）下，探索古代微生物群落的时空演化。
+EAAM (East Asian Ancient Microbiome) 研究数据库是一个专为展示和分析**东亚古微生物组（East Asian Ancient Microbiome）**数据而设计的综合性分析平台。项目结合了现代前后端技术与数据处理流水线，旨在让科研人员和考古学家能够直观地在宏观时间尺度（朝代）、地理空间尺度（省份/大区）以及人类行为尺度（生业模式）下，探索古代微生物群落的时空演化。
 
 ## 2. MVP 功能
 当前版本（MVP，Minimum Viable Product）已实现以下核心功能：

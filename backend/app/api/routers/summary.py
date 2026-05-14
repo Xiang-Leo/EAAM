@@ -48,6 +48,22 @@ def get_summary(db: Session = Depends(get_db)):
         .all()
     )
 
+    # ---- 采样点位：按经纬度聚合 ------------------------------------------
+    location_rows = (
+        db.query(
+            Sample.latitude,
+            Sample.longitude,
+            Sample.province,
+            Sample.region,
+            Sample.dynasty,
+            func.count(Sample.id).label("count"),
+        )
+        .filter(Sample.latitude.isnot(None), Sample.longitude.isnot(None))
+        .group_by(Sample.latitude, Sample.longitude, Sample.province, Sample.region, Sample.dynasty)
+        .order_by(func.count(Sample.id).desc())
+        .all()
+    )
+
     # ---- rank 分布（各层级 taxon 数量）--------------------------------------
     rank_dist = (
         db.query(Taxon.rank, func.count(Taxon.id).label("count"))
@@ -70,5 +86,16 @@ def get_summary(db: Session = Depends(get_db)):
         ],
         "rank_distribution": [
             {"rank": r, "count": c} for r, c in rank_dist
+        ],
+        "sample_locations": [
+            {
+                "latitude": lat,
+                "longitude": lon,
+                "province": province,
+                "region": region,
+                "dynasty": dynasty,
+                "count": count,
+            }
+            for lat, lon, province, region, dynasty, count in location_rows
         ],
     }

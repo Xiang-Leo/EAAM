@@ -16,7 +16,7 @@ class Settings(BaseSettings):
 
     # ---- 应用基础信息 -------------------------------------------------
     APP_TITLE:       str = "EAAM API"
-    APP_DESCRIPTION: str = "Ancient Chinese Dental Calculus Microbiome Database"
+    APP_DESCRIPTION: str = "East Asian Ancient Microbiome Database"
     APP_VERSION:     str = "1.0.0"
 
     # ---- CORS ---------------------------------------------------------
