@@ -227,6 +227,34 @@ def list_uploads(db: Session) -> list[AdminUpload]:
     return db.query(AdminUpload).order_by(AdminUpload.created_at.desc()).all()
 
 
+def delete_upload(db: Session, upload_id: int, user: AdminUser) -> int:
+    upload = db.query(AdminUpload).filter(AdminUpload.id == upload_id).first()
+    if upload is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Upload not found.")
+
+    original_filename = upload.original_filename
+    deleted_abundance = (
+        db.query(FunctionalAbundance)
+        .filter(FunctionalAbundance.source_upload_id == upload.id)
+        .delete(synchronize_session=False)
+    )
+    db.query(DataImportJob).filter(DataImportJob.upload_id == upload.id).delete(synchronize_session=False)
+    path = Path(upload.path)
+    if path.exists():
+        path.unlink()
+    db.delete(upload)
+    db.commit()
+    log_audit(
+        db,
+        user,
+        "upload.delete",
+        "upload",
+        upload_id,
+        detail={"filename": original_filename, "deleted_abundance": deleted_abundance},
+    )
+    return deleted_abundance
+
+
 def list_jobs(db: Session) -> list[DataImportJob]:
     return db.query(DataImportJob).order_by(DataImportJob.created_at.desc()).all()
 
@@ -353,6 +381,59 @@ def _to_float(value: str, row_number: int, column: str, errors: list[str]) -> fl
         return 0.0
 
 
+def _parse_estimated_year(value: str) -> int | None:
+    """Parse common archaeological date formats into an approximate CE/BCE year."""
+    raw = value.strip()
+    if not raw:
+        return None
+
+    normalized = (
+        raw.replace("–", "-")
+        .replace("—", "-")
+        .replace("−", "-")
+        .replace("±", "+/-")
+        .replace(" ", "")
+    )
+
+    try:
+        return int(float(normalized))
+    except ValueError:
+        pass
+
+    bp_range = re.fullmatch(r"(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)BP", normalized, flags=re.IGNORECASE)
+    if bp_range:
+        midpoint_bp = (float(bp_range.group(1)) + float(bp_range.group(2))) / 2
+        return int(round(1950 - midpoint_bp))
+
+    bp_pm = re.fullmatch(r"(\d+(?:\.\d+)?)(?:\+/-)(\d+(?:\.\d+)?)BP", normalized, flags=re.IGNORECASE)
+    if bp_pm:
+        return int(round(1950 - float(bp_pm.group(1))))
+
+    bp_single = re.fullmatch(r"(\d+(?:\.\d+)?)BP", normalized, flags=re.IGNORECASE)
+    if bp_single:
+        return int(round(1950 - float(bp_single.group(1))))
+
+    bc_range = re.fullmatch(r"(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)(BC|BCE)", normalized, flags=re.IGNORECASE)
+    if bc_range:
+        midpoint_bc = (float(bc_range.group(1)) + float(bc_range.group(2))) / 2
+        return -int(round(midpoint_bc))
+
+    bc_single = re.fullmatch(r"(\d+(?:\.\d+)?)(BC|BCE)", normalized, flags=re.IGNORECASE)
+    if bc_single:
+        return -int(round(float(bc_single.group(1))))
+
+    ce_range = re.fullmatch(r"(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)(AD|CE)?", normalized, flags=re.IGNORECASE)
+    if ce_range:
+        midpoint_ce = (float(ce_range.group(1)) + float(ce_range.group(2))) / 2
+        return int(round(midpoint_ce))
+
+    ce_single = re.fullmatch(r"(\d+(?:\.\d+)?)(AD|CE)", normalized, flags=re.IGNORECASE)
+    if ce_single:
+        return int(round(float(ce_single.group(1))))
+
+    return None
+
+
 def _upsert_samples(db: Session, path: Path, mapping: dict | None = None) -> tuple[int, list[str]]:
     df = _read_table(path, ",")
     rename = {
@@ -397,22 +478,11 @@ def _upsert_samples(db: Session, path: Path, mapping: dict | None = None) -> tup
             value = str(row.get(col, "")).strip()
             if not value:
                 return None
-            try:
-                return int(float(value))
-            except ValueError:
-                # Support archaeological ranges such as "582-306BP".
-                # BP is conventionally years before 1950; store the midpoint as CE/BCE year.
-                bp_range = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s*BP\s*", value, flags=re.IGNORECASE)
-                if bp_range:
-                    older_bp = float(bp_range.group(1))
-                    younger_bp = float(bp_range.group(2))
-                    midpoint_bp = (older_bp + younger_bp) / 2
-                    return int(round(1950 - midpoint_bp))
-                bp_single = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*BP\s*", value, flags=re.IGNORECASE)
-                if bp_single:
-                    return int(round(1950 - float(bp_single.group(1))))
-                errors.append(f"Invalid integer for sample {sid}, column {col}: {value!r}")
-                return None
+            parsed = _parse_estimated_year(value)
+            if parsed is not None:
+                return parsed
+            errors.append(f"Invalid integer for sample {sid}, column {col}: {value!r}")
+            return None
 
         def number(col: str) -> float | None:
             value = str(row.get(col, "")).strip()
@@ -636,7 +706,7 @@ def _import_pathway(db: Session, upload: AdminUpload, mapping: dict | None = Non
     return inserted, []
 
 
-def run_import(db: Session, upload: AdminUpload, user: AdminUser, field_mapping: dict | None = None) -> DataImportJob:
+def create_import_job(db: Session, upload: AdminUpload, user: AdminUser, field_mapping: dict | None = None) -> DataImportJob:
     data_type = infer_data_type(upload.original_filename, upload.data_type)
     job = DataImportJob(
         upload_id=upload.id,
@@ -648,7 +718,17 @@ def run_import(db: Session, upload: AdminUpload, user: AdminUser, field_mapping:
     db.add(job)
     db.commit()
     db.refresh(job)
+    return job
 
+
+def _execute_import_job(
+    db: Session,
+    job: DataImportJob,
+    upload: AdminUpload,
+    user: AdminUser,
+    field_mapping: dict | None = None,
+) -> DataImportJob:
+    data_type = infer_data_type(upload.original_filename, upload.data_type)
     upload_path = Path(upload.path)
     report_dir = upload_path.parent / "reports"
     log_path = report_dir / f"import_{job.id}.log"
@@ -701,6 +781,26 @@ def run_import(db: Session, upload: AdminUpload, user: AdminUser, field_mapping:
     db.refresh(job)
     log_audit(db, user, "import.run", "import_job", job.id, status_value=job.status, detail={"upload_id": upload.id, "message": job.message})
     return job
+
+
+def run_import(db: Session, upload: AdminUpload, user: AdminUser, field_mapping: dict | None = None) -> DataImportJob:
+    job = create_import_job(db, upload, user, field_mapping)
+    return _execute_import_job(db, job, upload, user, field_mapping)
+
+
+def run_import_background(job_id: int, upload_id: int, user_id: int, field_mapping: dict | None = None) -> None:
+    from app.database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        job = db.query(DataImportJob).filter(DataImportJob.id == job_id).first()
+        upload = db.query(AdminUpload).filter(AdminUpload.id == upload_id).first()
+        user = db.query(AdminUser).filter(AdminUser.id == user_id).first()
+        if job is None or upload is None or user is None:
+            return
+        _execute_import_job(db, job, upload, user, field_mapping)
+    finally:
+        db.close()
 
 
 def _sqlite_database_path() -> Path:

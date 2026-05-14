@@ -134,6 +134,15 @@ export default function AdminPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
+  useEffect(() => {
+    if (!token || !jobs.some((job) => job.status === 'running' || job.status === 'pending')) return;
+    const timer = window.setInterval(() => {
+      refresh();
+    }, 5000);
+    return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, jobs]);
+
   async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
     const res = await fetch(path, {
       ...init,
@@ -241,7 +250,7 @@ export default function AdminPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ field_mapping: fieldMapping }),
       });
-      setMessage(job.message || `Import ${job.status}.`);
+      setMessage(`Import job ${job.id} started. You can continue uploading while it runs.`);
       await refresh();
     } catch (error: any) {
       setMessage(error.message);
@@ -280,6 +289,23 @@ export default function AdminPage() {
       const defaults: Record<string, string> = {};
       for (const field of data.required_fields) defaults[field] = field;
       setFieldMapping(defaults);
+    } catch (error: any) {
+      setMessage(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteUpload(uploadItem: UploadItem) {
+    const ok = window.confirm(`Delete uploaded file ${uploadItem.original_filename}? Any functional abundance records imported from this upload will also be removed.`);
+    if (!ok) return;
+    setBusy(true);
+    setMessage('');
+    try {
+      await apiFetch(`/api/admin/uploads/${uploadItem.id}`, { method: 'DELETE' });
+      if (preview?.upload_id === uploadItem.id) setPreview(null);
+      setMessage('Upload deleted.');
+      await refresh();
     } catch (error: any) {
       setMessage(error.message);
     } finally {
@@ -739,6 +765,14 @@ export default function AdminPage() {
                       >
                         <Play className="h-3.5 w-3.5" />
                         Import
+                      </button>
+                      <button
+                        onClick={() => deleteUpload(item)}
+                        disabled={busy}
+                        className="inline-flex items-center gap-1 rounded-md border border-red-200 px-2 py-1 text-xs text-red-700 disabled:opacity-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete
                       </button>
                     </div>
                   </td>

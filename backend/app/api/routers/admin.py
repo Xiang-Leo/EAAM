@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Header, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -242,6 +242,16 @@ def get_uploads(
     return [_serialize_upload(upload) for upload in admin_service.list_uploads(db)]
 
 
+@router.delete("/uploads/{upload_id}")
+def delete_upload(
+    upload_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_admin),
+) -> dict:
+    deleted_abundance = admin_service.delete_upload(db, upload_id, user)
+    return {"status": "deleted", "deleted_abundance": deleted_abundance}
+
+
 @router.get("/uploads/{upload_id}/preview", response_model=UploadPreview)
 def preview_upload(
     upload_id: int,
@@ -257,6 +267,7 @@ def preview_upload(
 @router.post("/uploads/{upload_id}/import", response_model=JobRead)
 def import_upload(
     upload_id: int,
+    background_tasks: BackgroundTasks,
     payload: ImportRequest | None = None,
     db: Session = Depends(get_db),
     user=Depends(get_current_admin),
@@ -264,7 +275,9 @@ def import_upload(
     upload = db.query(AdminUpload).filter(AdminUpload.id == upload_id).first()
     if upload is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Upload not found.")
-    job = admin_service.run_import(db, upload, user, (payload.field_mapping if payload else {}))
+    field_mapping = payload.field_mapping if payload else {}
+    job = admin_service.create_import_job(db, upload, user, field_mapping)
+    background_tasks.add_task(admin_service.run_import_background, job.id, upload.id, user.id, field_mapping)
     return _serialize_job(job)
 
 

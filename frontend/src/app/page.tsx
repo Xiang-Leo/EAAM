@@ -7,6 +7,99 @@ import { getSummary } from '@/lib/api';
 import type { SummaryResponse } from '@/types/api';
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
+const TILE_SIZE = 256;
+const MAP_ZOOM = 4;
+const MAP_WIDTH = 960;
+const MAP_HEIGHT = 420;
+const MAP_CENTER = { lon: 105, lat: 35 };
+
+function lonLatToWorld(lon: number, lat: number, zoom: number) {
+  const scale = TILE_SIZE * 2 ** zoom;
+  const sinLat = Math.sin((lat * Math.PI) / 180);
+  return {
+    x: ((lon + 180) / 360) * scale,
+    y: (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * scale,
+  };
+}
+
+function SamplingTileMap({ locations }: { locations: SummaryResponse['sample_locations'] }) {
+  const center = lonLatToWorld(MAP_CENTER.lon, MAP_CENTER.lat, MAP_ZOOM);
+  const topLeft = { x: center.x - MAP_WIDTH / 2, y: center.y - MAP_HEIGHT / 2 };
+  const startX = Math.floor(topLeft.x / TILE_SIZE);
+  const endX = Math.floor((topLeft.x + MAP_WIDTH) / TILE_SIZE);
+  const startY = Math.floor(topLeft.y / TILE_SIZE);
+  const endY = Math.floor((topLeft.y + MAP_HEIGHT) / TILE_SIZE);
+  const tileCount = 2 ** MAP_ZOOM;
+  const tiles = [];
+
+  for (let x = startX; x <= endX; x += 1) {
+    for (let y = startY; y <= endY; y += 1) {
+      if (y < 0 || y >= tileCount) continue;
+      const wrappedX = ((x % tileCount) + tileCount) % tileCount;
+      const subdomain = ['a', 'b', 'c'][Math.abs(x + y) % 3];
+      tiles.push({
+        key: `${x}-${y}`,
+        src: `https://${subdomain}.basemaps.cartocdn.com/light_all/${MAP_ZOOM}/${wrappedX}/${y}.png`,
+        left: x * TILE_SIZE - topLeft.x,
+        top: y * TILE_SIZE - topLeft.y,
+      });
+    }
+  }
+
+  const points = locations
+    .filter((site) => site.latitude !== null && site.longitude !== null)
+    .map((site) => {
+      const pos = lonLatToWorld(Number(site.longitude), Number(site.latitude), MAP_ZOOM);
+      return {
+        ...site,
+        left: pos.x - topLeft.x,
+        top: pos.y - topLeft.y,
+        size: Math.max(10, Math.min(34, 10 + site.count * 3)),
+      };
+    })
+    .filter((site) => site.left >= -40 && site.left <= MAP_WIDTH + 40 && site.top >= -40 && site.top <= MAP_HEIGHT + 40);
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+      <div className="mb-4">
+        <h2 className="text-base font-semibold text-gray-700">Sampling Map</h2>
+        <p className="text-xs text-gray-500 mt-1">CartoDB Positron basemap with sampling locations scaled by sample count.</p>
+      </div>
+      <div className="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-100" style={{ height: MAP_HEIGHT }}>
+        {tiles.map((tile) => (
+          <img
+            key={tile.key}
+            src={tile.src}
+            alt=""
+            className="absolute h-64 w-64 select-none"
+            style={{ left: tile.left, top: tile.top }}
+            draggable={false}
+          />
+        ))}
+        {points.map((site, index) => (
+          <div
+            key={`${site.longitude}-${site.latitude}-${site.province}-${site.dynasty}-${index}`}
+            className="group absolute -translate-x-1/2 -translate-y-1/2"
+            style={{ left: site.left, top: site.top }}
+          >
+            <div
+              className="rounded-full border-2 border-white bg-teal-600/80 shadow"
+              style={{ width: site.size, height: site.size }}
+            />
+            <div className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 hidden min-w-44 -translate-x-1/2 rounded-md bg-white px-3 py-2 text-xs shadow-lg ring-1 ring-gray-200 group-hover:block">
+              <div className="font-medium text-gray-900">{site.province || 'Unknown'} · {site.dynasty || 'Unknown'}</div>
+              <div className="text-gray-500">Region: {site.region || 'Unknown'}</div>
+              <div className="text-gray-500">Samples: {site.count}</div>
+            </div>
+          </div>
+        ))}
+        <div className="absolute bottom-2 right-2 rounded bg-white/90 px-2 py-1 text-[10px] text-gray-500 shadow-sm">
+          Tiles © CARTO © OpenStreetMap contributors
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
@@ -122,62 +215,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-            <ReactECharts
-              option={{
-                title: { text: 'Sampling Map', textStyle: { fontSize: 14, color: '#374151' } },
-                tooltip: {
-                  trigger: 'item',
-                  formatter: (params: { data: any[] }) => {
-                    const [lon, lat, count, province, dynasty, region] = params.data;
-                    return [
-                      `${province || 'Unknown'} · ${dynasty || 'Unknown'}`,
-                      `Region: ${region || 'Unknown'}`,
-                      `Samples: ${count}`,
-                      `Lon/Lat: ${Number(lon).toFixed(2)}, ${Number(lat).toFixed(2)}`,
-                    ].join('<br/>');
-                  },
-                },
-                grid: { left: 54, right: 22, top: 52, bottom: 46 },
-                xAxis: {
-                  type: 'value',
-                  name: 'Longitude',
-                  min: 70,
-                  max: 145,
-                  splitLine: { lineStyle: { color: '#e5e7eb' } },
-                },
-                yAxis: {
-                  type: 'value',
-                  name: 'Latitude',
-                  min: 15,
-                  max: 55,
-                  splitLine: { lineStyle: { color: '#e5e7eb' } },
-                },
-                series: [
-                  {
-                    name: 'Sampling sites',
-                    type: 'scatter',
-                    data: data.sample_locations.map((site) => [
-                      site.longitude,
-                      site.latitude,
-                      site.count,
-                      site.province,
-                      site.dynasty,
-                      site.region,
-                    ]),
-                    symbolSize: (value: any[]) => Math.max(8, Math.min(34, 8 + Number(value[2]) * 3)),
-                    itemStyle: {
-                      color: '#0f766e',
-                      opacity: 0.78,
-                      borderColor: '#ffffff',
-                      borderWidth: 1,
-                    },
-                  },
-                ],
-              }}
-              style={{ height: 420 }}
-            />
-          </div>
+          <SamplingTileMap locations={data.sample_locations} />
 
           {/* Rank Distribution & Quick Links */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
