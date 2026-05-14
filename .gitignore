@@ -8,6 +8,8 @@ build/
 venv/
 .venv/
 tests/
+tmp
+uploads/
 
 # Database (contains real data, do not commit)
 data/eaam.db

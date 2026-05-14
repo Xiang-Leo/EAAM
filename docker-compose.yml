@@ -8,6 +8,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./uploads:/app/uploads
+      - ./backend/ancient_calculus.db:/app/ancient_calculus.db
     environment:
       - DATABASE_URL=sqlite:////app/ancient_calculus.db
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}

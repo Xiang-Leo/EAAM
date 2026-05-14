@@ -144,6 +144,7 @@ ADMIN_PASSWORD=请替换为强密码
 - 删除某次 KO / pathway 功能丰度导入的数据
 
 上传文件和导入报告会保存到宿主机 `./uploads`，并通过 Docker 挂载到后端容器 `/app/uploads`。
+SQLite 数据库文件通过 `./backend/ancient_calculus.db:/app/ancient_calculus.db` 挂载，后台导入、删除、恢复后的数据会保留在宿主机文件中。
 数据库备份会保存到 `./uploads/backups`。当前备份 / 恢复功能面向 SQLite 部署；若切换到 PostgreSQL，应改用 `pg_dump` / `pg_restore` 工作流。
 
 后台第三期支持：

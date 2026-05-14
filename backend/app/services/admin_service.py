@@ -38,6 +38,7 @@ from app.models import (
 
 PBKDF2_ITERATIONS = 200_000
 ALLOWED_EXTENSIONS = {".csv", ".tsv"}
+TEXT_ENCODINGS = ("utf-8-sig", "gb18030", "gbk", "latin1")
 
 
 def log_audit(
@@ -244,13 +245,31 @@ def _write_report(path: Path, lines: Iterable[str]) -> None:
 
 
 def _read_table(path: Path, sep: str) -> pd.DataFrame:
-    return pd.read_csv(path, sep=sep, dtype=str, keep_default_na=False)
+    last_error: UnicodeDecodeError | None = None
+    for encoding in TEXT_ENCODINGS:
+        try:
+            return pd.read_csv(path, sep=sep, dtype=str, keep_default_na=False, encoding=encoding)
+        except UnicodeDecodeError as exc:
+            last_error = exc
+    detail = f"Cannot decode file {path.name}; tried encodings: {', '.join(TEXT_ENCODINGS)}"
+    if last_error:
+        detail = f"{detail}. Last error: {last_error}"
+    raise ValueError(detail)
 
 
 def _read_header(path: Path, sep: str) -> list[str]:
-    with path.open("r", encoding="utf-8-sig", newline="") as handle:
-        first_line = handle.readline().rstrip("\n\r")
-    return first_line.split(sep)
+    last_error: UnicodeDecodeError | None = None
+    for encoding in TEXT_ENCODINGS:
+        try:
+            with path.open("r", encoding=encoding, newline="") as handle:
+                first_line = handle.readline().rstrip("\n\r")
+            return first_line.split(sep)
+        except UnicodeDecodeError as exc:
+            last_error = exc
+    detail = f"Cannot decode file header {path.name}; tried encodings: {', '.join(TEXT_ENCODINGS)}"
+    if last_error:
+        detail = f"{detail}. Last error: {last_error}"
+    raise ValueError(detail)
 
 
 def _mapping_value(mapping: dict | None, key: str, default: str) -> str:
