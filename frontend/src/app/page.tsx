@@ -47,9 +47,11 @@ function SamplingTileMap({ locations }: { locations: SummaryResponse['sample_loc
   }
 
   const points = locations
-    .filter((site) => site.latitude !== null && site.longitude !== null)
     .map((site) => {
-      const pos = lonLatToWorld(Number(site.longitude), Number(site.latitude), MAP_ZOOM);
+      const longitude = Number(site.longitude);
+      const latitude = Number(site.latitude);
+      if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) return null;
+      const pos = lonLatToWorld(longitude, latitude, MAP_ZOOM);
       return {
         ...site,
         left: pos.x - topLeft.x,
@@ -57,6 +59,7 @@ function SamplingTileMap({ locations }: { locations: SummaryResponse['sample_loc
         size: Math.max(10, Math.min(34, 10 + site.count * 3)),
       };
     })
+    .filter((site): site is NonNullable<typeof site> => site !== null)
     .filter((site) => site.left >= -40 && site.left <= MAP_WIDTH + 40 && site.top >= -40 && site.top <= MAP_HEIGHT + 40);
 
   return (
@@ -90,9 +93,15 @@ function SamplingTileMap({ locations }: { locations: SummaryResponse['sample_loc
               <div className="font-medium text-gray-900">{site.province || 'Unknown'} · {site.dynasty || 'Unknown'}</div>
               <div className="text-gray-500">Region: {site.region || 'Unknown'}</div>
               <div className="text-gray-500">Samples: {site.count}</div>
+              {site.estimated && <div className="text-amber-600">Approximate province/region point</div>}
             </div>
           </div>
         ))}
+        {points.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/70 px-6 text-center text-sm text-gray-600">
+            No sampling coordinates are available yet. Upload metadata with latitude/longitude, or at least province/region names.
+          </div>
+        )}
         <div className="absolute bottom-2 right-2 rounded bg-white/90 px-2 py-1 text-[10px] text-gray-500 shadow-sm">
           Tiles © CARTO © OpenStreetMap contributors
         </div>

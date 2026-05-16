@@ -307,6 +307,33 @@ def _mapping_value(mapping: dict | None, key: str, default: str) -> str:
     return str(value).strip() if value else default
 
 
+def _resolve_column(columns: Iterable[str], mapping: dict | None, key: str, aliases: Iterable[str]) -> str | None:
+    mapped = _mapping_value(mapping, key, "")
+    column_list = list(columns)
+    if mapped and mapped in column_list:
+        return mapped
+
+    exact_aliases = [alias for alias in aliases if alias in column_list]
+    if exact_aliases:
+        return exact_aliases[0]
+
+    normalized = {str(column).strip().lower().replace(" ", "_"): column for column in column_list}
+    for alias in aliases:
+        match = normalized.get(str(alias).strip().lower().replace(" ", "_"))
+        if match:
+            return match
+    return None
+
+
+def _rename_with_aliases(df: pd.DataFrame, mapping: dict | None, alias_map: dict[str, list[str]]) -> pd.DataFrame:
+    rename: dict[str, str] = {}
+    for target, aliases in alias_map.items():
+        source = _resolve_column(df.columns, mapping, target, aliases)
+        if source:
+            rename[source] = target
+    return df.rename(columns=rename)
+
+
 def preview_upload(db: Session, upload: AdminUpload, max_rows: int = 5) -> dict:
     data_type = infer_data_type(upload.original_filename, upload.data_type)
     path = Path(upload.path)
@@ -317,7 +344,7 @@ def preview_upload(db: Session, upload: AdminUpload, max_rows: int = 5) -> dict:
     sample_ids = set(_sample_map(db))
 
     if data_type == "samples":
-        required = ["sample_id", "province", "region", "dynasty"]
+        required = ["sample_id", "province", "region", "dynasty", "latitude", "longitude"]
         sample_columns: list[str] = []
     elif data_type == "gene_family":
         required = ["feature_id"]
@@ -330,7 +357,14 @@ def preview_upload(db: Session, upload: AdminUpload, max_rows: int = 5) -> dict:
         sample_columns = []
 
     validation = []
-    missing_required = [col for col in required if col not in header]
+    if data_type == "samples":
+        missing_required = [
+            col
+            for col in required
+            if _resolve_column(header, None, col, SAMPLE_COLUMN_ALIASES[col]) is None
+        ]
+    else:
+        missing_required = [col for col in required if col not in header]
     if missing_required:
         validation.append(f"Missing expected columns: {', '.join(missing_required)}")
     if sample_columns:
@@ -434,24 +468,39 @@ def _parse_estimated_year(value: str) -> int | None:
     return None
 
 
+SAMPLE_COLUMN_ALIASES = {
+    "sample_id": ["sample_id", "sample", "sampleid", "sample_ID", "SampleID", "Sample_ID", "id", "ID", "样品编号", "样品ID"],
+    "province": ["province", "Province", "state", "State", "省份", "省"],
+    "region": ["region", "Region", "area", "Area", "地区", "区域"],
+    "dynasty": ["dynasty", "Dynasty", "period_group", "PeriodGroup", "朝代", "时代"],
+    "period": ["period", "Period", "时期"],
+    "estimated_year": ["estimated_year", "EstimatedYear", "estimated age", "date", "Date", "year", "Year", "年代", "测年"],
+    "sex": ["sex", "Sex", "gender", "Gender", "性别"],
+    "subsistence_pattern": ["subsistence_pattern", "SubsistencePattern", "subsistence", "diet", "生业方式", "生计方式"],
+    "site_name": ["site_name", "SiteName", "site", "Site", "遗址", "遗址名称"],
+    "latitude": ["latitude", "Latitude", "lat", "Lat", "LAT", "y", "Y", "纬度"],
+    "longitude": ["longitude", "Longitude", "longitude", "lon", "Lon", "lng", "Lng", "long", "Long", "LONG", "x", "X", "经度"],
+    "source": ["source", "Source", "reference", "Reference", "citation", "Citation", "来源"],
+    "source_url": ["source_url", "SourceURL", "url", "URL", "link", "Link", "链接"],
+}
+
+
+def _parse_number(value: str) -> float | None:
+    raw = value.strip()
+    if not raw:
+        return None
+    normalized = raw.replace("，", ".").replace(",", ".").replace("°", "")
+    try:
+        return float(normalized)
+    except ValueError:
+        match = re.search(r"-?\d+(?:\.\d+)?", normalized)
+        return float(match.group(0)) if match else None
+
+
 def _upsert_samples(db: Session, path: Path, mapping: dict | None = None) -> tuple[int, list[str]]:
-    df = _read_table(path, ",")
-    rename = {
-        _mapping_value(mapping, "sample_id", "sample_id"): "sample_id",
-        _mapping_value(mapping, "province", "province"): "province",
-        _mapping_value(mapping, "region", "region"): "region",
-        _mapping_value(mapping, "dynasty", "dynasty"): "dynasty",
-        _mapping_value(mapping, "period", "period"): "period",
-        _mapping_value(mapping, "estimated_year", "estimated_year"): "estimated_year",
-        _mapping_value(mapping, "sex", "sex"): "sex",
-        _mapping_value(mapping, "subsistence_pattern", "subsistence_pattern"): "subsistence_pattern",
-        _mapping_value(mapping, "site_name", "site_name"): "site_name",
-        _mapping_value(mapping, "latitude", "latitude"): "latitude",
-        _mapping_value(mapping, "longitude", "longitude"): "longitude",
-        _mapping_value(mapping, "source", "source"): "source",
-        _mapping_value(mapping, "source_url", "source_url"): "source_url",
-    }
-    df = df.rename(columns={src: dst for src, dst in rename.items() if src in df.columns})
+    sep = "\t" if path.suffix.lower() == ".tsv" else ","
+    df = _read_table(path, sep)
+    df = _rename_with_aliases(df, mapping, SAMPLE_COLUMN_ALIASES)
     required = {"sample_id", "province", "region", "dynasty"}
     errors: list[str] = []
     missing = required - set(df.columns)
@@ -488,11 +537,11 @@ def _upsert_samples(db: Session, path: Path, mapping: dict | None = None) -> tup
             value = str(row.get(col, "")).strip()
             if not value:
                 return None
-            try:
-                return float(value)
-            except ValueError:
-                errors.append(f"Invalid number for sample {sid}, column {col}: {value!r}")
-                return None
+            parsed = _parse_number(value)
+            if parsed is not None:
+                return parsed
+            errors.append(f"Invalid number for sample {sid}, column {col}: {value!r}")
+            return None
 
         sample.province = text("province")
         sample.region = text("region")

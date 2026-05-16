@@ -141,6 +141,7 @@ export interface SampleLocation {
   region: string | null;
   dynasty: string | null;
   count: number;
+  estimated?: boolean;
 }
 
 export interface SummaryResponse {

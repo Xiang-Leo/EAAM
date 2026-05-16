@@ -137,7 +137,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (!token || !jobs.some((job) => job.status === 'running' || job.status === 'pending')) return;
     const timer = window.setInterval(() => {
-      refresh();
+      refresh(false);
     }, 5000);
     return () => window.clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -189,11 +189,11 @@ export default function AdminPage() {
     }
   }
 
-  async function refresh() {
-    setBusy(true);
+  async function refresh(showBusy = true) {
+    if (showBusy) setBusy(true);
     setMessage('');
     try {
-      const [uploadData, jobData, backupData, statsData, sampleData, userData, auditData] = await Promise.all([
+      const results = await Promise.allSettled([
         apiFetch<UploadItem[]>('/api/admin/uploads'),
         apiFetch<ImportJob[]>('/api/admin/imports'),
         apiFetch<BackupItem[]>('/api/admin/backups'),
@@ -202,17 +202,23 @@ export default function AdminPage() {
         apiFetch<AdminUserItem[]>('/api/admin/users'),
         apiFetch<AuditLogItem[]>('/api/admin/audit-logs?limit=50'),
       ]);
-      setUploads(uploadData);
-      setJobs(jobData);
-      setBackups(backupData);
-      setStats(statsData);
-      setSamples(sampleData);
-      setUsers(userData);
-      setAuditLogs(auditData);
+      const [uploadData, jobData, backupData, statsData, sampleData, userData, auditData] = results;
+      if (uploadData.status === 'fulfilled') setUploads(uploadData.value);
+      if (jobData.status === 'fulfilled') setJobs(jobData.value);
+      if (backupData.status === 'fulfilled') setBackups(backupData.value);
+      if (statsData.status === 'fulfilled') setStats(statsData.value);
+      if (sampleData.status === 'fulfilled') setSamples(sampleData.value);
+      if (userData.status === 'fulfilled') setUsers(userData.value);
+      if (auditData.status === 'fulfilled') setAuditLogs(auditData.value);
+
+      const failures = results.filter((result) => result.status === 'rejected');
+      if (failures.length > 0) {
+        setMessage(`${failures.length} admin panel request(s) failed. Other sections were refreshed.`);
+      }
     } catch (error: any) {
       setMessage(error.message);
     } finally {
-      setBusy(false);
+      if (showBusy) setBusy(false);
     }
   }
 
@@ -497,7 +503,7 @@ export default function AdminPage() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={refresh}
+            onClick={() => refresh()}
             disabled={busy}
             className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
           >
@@ -802,7 +808,7 @@ export default function AdminPage() {
               className="rounded-md border border-gray-300 px-3 py-2 text-sm"
             />
             <button
-              onClick={refresh}
+              onClick={() => refresh()}
               disabled={busy}
               className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm disabled:opacity-50"
             >

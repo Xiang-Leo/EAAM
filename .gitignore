@@ -13,6 +13,7 @@ uploads/
 
 # Database (contains real data, do not commit)
 data/eaam.db
+ancient_calculus.db
 
 # Environment variables (contains server IP and secrets)
 .env
